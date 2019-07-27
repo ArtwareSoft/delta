@@ -1,0 +1,15 @@
+{
+  "name": "delta",
+  "version": "0.0.1",
+  "description": "incremental conversion - implemented with jBart DSLs",
+  "main": "index.js",
+  "scripts": {
+    "test": "start tests.html"
+  },
+  "author": "Shai Ben-Yehuda <shaiby@artwaresoft.com> (http://artwaresoft.com)",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "jbart5-react": "github:artwaresoft/jb-react"
+  },
+  "devDependencies": {}
+}
