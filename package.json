@@ -4,7 +4,8 @@
   "description": "incremental conversion - implemented with jBart DSLs",
   "main": "index.js",
   "scripts": {
-    "test": "start tests.html"
+    "test": "start tests.html",
+    "ts": "node node_modules/jbart5-react/bin/tgp2ts srcDir:. -out:delta"
   },
   "author": "Shai Ben-Yehuda <shaiby@artwaresoft.com> (http://artwaresoft.com)",
   "license": "GPL-3.0",

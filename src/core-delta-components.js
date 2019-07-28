@@ -122,14 +122,17 @@ jb.component('inc.accumulate-sum', {
         delta2delta: (ctx, {transformationFunc}) => {
             const delta = ctx.data
             return [delta, ...Object.keys(ctx.data).filter(x=>x!='$orig').map(key => {
-                const diff =  transformationFunc.ctx.setData(delta[key]).run(transformationFunc.profile.toAdd) - 
-                    transformationFunc.ctx.setData(delta.$orig[key]).run(transformationFunc.profile.toAdd)
+                const diff =  toAddOfKey(delta,key) - toAddOfKey(delta.$orig,key)
                 return {
                     $linearAcc: {
                         after: key,
                         delta: { [transformationFunc.profile.resultProp]: {$add: diff } }
                 }}
             })]
+
+            function toAddOfKey(deltaObj, key) {
+                return (deltaObj && deltaObj[key] && transformationFunc.ctx.setData(deltaObj[key]).run(transformationFunc.profile.toAdd)) || 0
+            }
         }
     },
 })
@@ -148,13 +151,21 @@ jb.component('inc.join', {
         supportKeyChange: false, 
         supportOrderChange: false, 
         $vars: {
-           separtor_length: ({},{transformationFunc}) => transformationFunc.profile.separator.length
+           separator: ({},{transformationFunc}) => transformationFunc.profile.separator
         },
         inputToCache :{$chain: [ 
                 { $mapValues: ({data}) => ({length: data.length}) }, 
-                { $: 'accumulate-sum', resultProp: 'posOfNext', toAdd: ({data}, {separtor_length}) => data.length + separtor_length }
+                { $: 'accumulate-sum', resultProp: 'posOfNext', toAdd: ({data}, {separator}) => data.length + separator.length }
         ]},
-        delta2delta: ({data},{cache}) =>
-                Object.keys(data).filter(x=>x!='$orig').sort().reverse().map(id=> ({ $splice: {from: cache[id-1].posOfNext, itemsToRemove: cache[id].length, toAdd: data[id] } }))
+        delta2delta: ({data},{cache, separator}) =>
+                Object.keys(data).filter(x=>x!='$orig').sort().reverse().map(id=> {
+                    if (data.$orig[id] === undefined && Object.keys(cache).length == id) { // new elem (push)
+                        return { $splice: {from: cache[id-1].posOfNext, itemsToRemove: 0, toAdd: separator + data[id] } }
+                    }
+                    if (data[id] === undefined) { // removed
+                        return { $splice: {from: cache[id-1].posOfNext, itemsToRemove: cache[id].length + separator.length, toAdd: '' } }
+                    }
+                    return { $splice: {from: cache[id-1] ? cache[id-1].posOfNext : 0, itemsToRemove: cache[id].length, toAdd: data[id] } }
+                })
     },
 })

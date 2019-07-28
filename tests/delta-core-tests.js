@@ -74,10 +74,28 @@ jb.component('delta-chain-with-cache', {
     }
 })
 
-jb.component('delta-join', {
+jb.component('delta-join-change-elem', {
     impl: {$: 'delta-test' ,
         calculate :{$: 'join', separator: ',' },
         initialData :{$asIs: {0: 'a', 1: 'b', 2: 'c'} },
         delta :{$asIs: { 1: 'bbb'} },
     }
 })
+
+jb.component('delta-join-add-elem', {
+    impl: {$: 'delta-test' ,
+        calculate :{$: 'join', separator: ',' },
+        initialData :{$asIs: {0: 'a', 1: 'b', 2: 'c'} },
+        delta :{$asIs: { 3: 'd'} },
+    }
+})
+
+jb.component('delta-join-remove-elem', {
+    impl: {$: 'delta-test' ,
+        calculate :{$: 'join', separator: ',' },
+        initialData :{$asIs: {0: 'a', 1: 'b', 2: 'c'} },
+        delta :{$asIs: { 1: undefined} },
+    }
+})
+
+
