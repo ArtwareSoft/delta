@@ -27,8 +27,8 @@ type cmp_def_incrementalType = {
 	params?: [param],
 	impl: incrementalType,
 }
-type inc_delta_with_cachePT = {$: 'inc.delta-with-cache', delta2delta: dataType,inputToCache: dataType,vars: asIsType}
-type inc_delta_without_cachePT = {$: 'inc.delta-without-cache', delta2delta: dataType}
+type inc_delta_with_cachePT = {$: 'inc.delta-with-cache', delta2deltas: dataType,inputToCache: dataType,vars: asIsType}
+type inc_delta_without_cachePT = {$: 'inc.delta-without-cache', delta2deltas: dataType}
 type inc_chainPT = {$: 'inc.chain', }
 type inc_mapValuesPT = {$: 'inc.mapValues', }
 type inc_accumulate_sumPT = {$: 'inc.accumulate-sum', }

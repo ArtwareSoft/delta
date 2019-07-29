@@ -34,9 +34,18 @@ delta_ops = {
         if (typeof val === 'number')
             return val + delta.$add
     },
-    linearAcc: (delta, val) =>
-        jb.objFromEntries(jb.entries(val).map(e=> e[0] < delta.$linearAcc.after ? e : [e[0], applyDelta(e[1], delta.$linearAcc.delta)]))
+    linearAcc: (delta, val) => {
+        if (Array.isArray(val))
+            return val.map((v,i) => i < delta.$linearAcc.after ? v : applyDelta(v, delta.$linearAcc.delta));
+        return jb.objFromEntries(jb.entries(val).map(e=> e[0] < delta.$linearAcc.after ? e : [e[0], applyDelta(e[1], delta.$linearAcc.delta)]))
+    }
 }
+
+// function isArray(obj) {
+//     const keys = Object.keys(obj)
+//     const sortedNums = keys.map(k=>Number(k)).filter(x=>!isNaN(x)).sort()
+//     return sortedNums[0] === 0 && sortedNums[keys.length-1] === keys.length-1
+// }
 
 // apply the redux way
 function applyDelta(val,delta) {
@@ -47,16 +56,37 @@ function applyDelta(val,delta) {
     if (op)
         return delta_ops[op](delta,val)
     
-    if (typeof delta === 'object') {
-        const toMerge = jb.entries(delta).filter(e=>e[0] !== '$orig').map(e=>[e[0], applyDelta(val[e[0]], delta[e[0]])])
-        return Object.assign({}, val, jb.objFromEntries(toMerge))
+    if (typeof delta === 'object' && !Array.isArray(delta)) {
+        const res = Array.isArray(val) ? val.slice(0) : Object.assign({},val); // clone
+        Object.keys(delta).filter(key=> key !== '$orig').forEach(key => res[key] = applyDelta(val[key], delta[key]))
+        return res
     }
+    // if (typeof delta === 'object') {
+    //     const toMerge = jb.entries(delta).filter(e=>e[0] !== '$orig').map(e=>[e[0], applyDelta(val[e[0]], delta[e[0]])])
+    //     return Object.assign({}, val, jb.objFromEntries(toMerge))
+    // }
     return delta; // primitive without op
 }
 
-function processDeltas(dInputs,deltaToDelta, ctx) {
+function deltas2deltas(dInputs,deltaToDelta, ctx) {
     // TODO: merge and sort deltas
-    return jb.toarray(dInputs).reduce((dOutput,delta) => [...dOutput, ...jb.toarray(deltaToDelta(ctx.setData(delta)))], [])
+    return asDarray(toDarray(dInputs).reduce((dOutput,delta) => [...dOutput, ...jb.toarray(deltaToDelta(ctx.setData(delta)))], []))
+}
+
+function toDarray(delta) {
+    if (delta === null || delta === undefined)
+        return []
+    return delta.$dArray ? delta : asDarray([delta])
+}
+
+function asDarray(arr) {
+    if (!Array.isArray(arr)) debugger
+    arr.$dArray = true
+    return arr;
+}
+
+function toSingleDelta(deltas) {
+    return deltas && deltas.$dArray ? deltas[0] : deltas
 }
 
 jb.delta = {
@@ -66,8 +96,11 @@ jb.delta = {
             return this._deltaObj.delta(...args)
         },
     }),
-    processDeltas,
-    applyDeltas: (input, deltas) => jb.toarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input),
+    toDarray,
+    toSingleDelta,
+    asDarray,
+    deltas2deltas,
+    applyDeltas: (input, deltas) => toDarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input),
     enrichWithOrig: (obj,orig) => // todo: recursive
         Object.assign({},obj, {$orig: jb.objFromEntries(jb.entries(obj).filter(e=> e[0].indexOf('$') !== 0).map(e=>[e[0],orig[e[0]]])) })
 }

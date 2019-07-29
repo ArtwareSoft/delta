@@ -1,19 +1,19 @@
-var {Derive, processDeltas} = jb.delta
+var {Derive, deltas2deltas, toSingleDelta, asDarray} = jb.delta
 
 jb.component('inc.delta-with-cache', {
     type: 'incremental',
     params: [
-        {id: 'delta2delta', dynamic: true},
+        {id: 'delta2deltas', dynamic: true},
         {id: 'inputToCache', dynamic: true},
         {id: 'vars', type: 'asIs'},
     ],
-    impl: (ctx, delta2delta, inputToCache, vars) => ({
+    impl: (ctx, delta2deltas, inputToCache, vars) => ({
         delta(dInputs,{cache, init} = {}) {
             this.delta2deltaCache = this.delta2deltaCache || Derive(inputToCache.profile, ctx);
 
             this.ctxWithVars = this.ctxWithVars || jb.entries(vars).reduce((resCtx, varEntry) => resCtx.setVars({[varEntry[0]]: resCtx.run(varEntry[1])}), ctx)
             if (init) {
-                const ctxWithFullData = this.ctxWithVars.setData(jb.tosingle(dInputs))
+                const ctxWithFullData = this.ctxWithVars.setData(toSingleDelta(dInputs))
                 const cacheResult = this.delta2deltaCache.delta(dInputs, {init})
                 return {
                     dOutput: ctxWithFullData.run(ctx.vars.transformationFunc.profile), 
@@ -22,7 +22,7 @@ jb.component('inc.delta-with-cache', {
             }
             const ctxWithCache = this.ctxWithVars.setVars({cache: cache.main })
             const cacheRes = this.delta2deltaCache.delta(dInputs, {cache: cache.inner})
-            return { dOutput: processDeltas(dInputs, delta2delta, ctxWithCache), dCache: { main: cacheRes.dOutput, inner: cacheRes.dCache } }
+            return { dOutput: deltas2deltas(dInputs, delta2deltas, ctxWithCache), dCache: { main: cacheRes.dOutput, inner: cacheRes.dCache } }
         }
     })
 })
@@ -30,17 +30,17 @@ jb.component('inc.delta-with-cache', {
 jb.component('inc.delta-without-cache', {
     type: 'incremental',
     params: [
-        {id: 'delta2delta', dynamic: true},
+        {id: 'delta2deltas', dynamic: true},
     ],
-    impl: (ctx, delta2delta) => ({
+    impl: (ctx, delta2deltas) => ({
         delta(dInputs, {init} = {}) {
             if (init) {
-                const ctxWithFullData = ctx.setData(jb.tosingle(dInputs))
+                const ctxWithFullData = ctx.setData(toSingleDelta(dInputs))
                 return {
                     dOutput: ctxWithFullData.run(ctx.vars.transformationFunc.profile)
                 }
             }
-            return { dOutput: delta2delta(ctx.setData(dInputs)) }
+            return { dOutput: deltas2deltas(dInputs, delta2deltas, ctx) }
         }
     })
 })
@@ -87,7 +87,9 @@ jb.component('mapValues', {
     params: [
         {id: 'map', dynamic: true}
     ],
-    impl: (ctx,map) => jb.mapValues(ctx.data, item => map(ctx.setData(item)))
+    impl: (ctx,map) => Array.isArray(ctx.data)
+        ? ctx.data.map(item=>map(ctx.setData(item)))
+        : jb.mapValues(ctx.data, item => map(ctx.setData(item)))
     // todo: if (map.compileLocal) jb.mapValues(ctx.data, data => map.compiledLocal({data}))
 })
 
@@ -95,7 +97,7 @@ jb.component('inc.mapValues', {
     derivationOf: 'mapValues',
     type: 'incremental',
     impl: { $: 'inc.delta-without-cache', 
-        delta2delta: (ctx,{transformationFunc}) => {
+        delta2deltas: (ctx,{transformationFunc}) => {
             const mapProfile = transformationFunc.profile.$mapValues || transformationFunc.profile.map
             return jb.objFromEntries(jb.entries(ctx.data).map(e=>e[0] == '$orig' ? e : [e[0], ctx.setData(e[1]).run(mapProfile) ]))
         }
@@ -111,6 +113,8 @@ jb.component('accumulate-sum', {
     ],
     impl: (ctx, prop, startValue, toAdd) => {
         let acc = startValue
+        if (Array.isArray(ctx.data))
+            return ctx.data.map(item=> Object.assign({},item,{[prop]: acc = acc + toAdd(ctx.setData(item))}))
         return jb.mapValues(ctx.data, item => Object.assign({},item, {[prop]: acc = acc + toAdd(ctx.setData(item))}))
     }
 })
@@ -119,16 +123,16 @@ jb.component('inc.accumulate-sum', {
     derivationOf: 'accumulate-sum',
     type: 'incremental',
     impl :{$: 'inc.delta-without-cache',
-        delta2delta: (ctx, {transformationFunc}) => {
+        delta2deltas: (ctx, {transformationFunc}) => {
             const delta = ctx.data
-            return [delta, ...Object.keys(ctx.data).filter(x=>x!='$orig').map(key => {
+            return asDarray([delta, ...Object.keys(ctx.data).filter(x=>x!='$orig').map(key => {
                 const diff =  toAddOfKey(delta,key) - toAddOfKey(delta.$orig,key)
                 return {
                     $linearAcc: {
                         after: key,
                         delta: { [transformationFunc.profile.resultProp]: {$add: diff } }
                 }}
-            })]
+            })])
 
             function toAddOfKey(deltaObj, key) {
                 return (deltaObj && deltaObj[key] && transformationFunc.ctx.setData(deltaObj[key]).run(transformationFunc.profile.toAdd)) || 0
@@ -141,7 +145,7 @@ jb.component('join', {
     params: [
         {id: 'separator', as: 'string'}
     ],
-    impl: ({data},separator) => jb.entries(data).map(e=>e[1]).join(separator)
+    impl: ({data},separator) => (Array.isArray(data) ? data :  jb.entries(data).map(e=>e[1])).join(separator)
 })
 
 jb.component('inc.join', {
@@ -157,7 +161,7 @@ jb.component('inc.join', {
                 { $mapValues: ({data}) => ({length: data.length}) }, 
                 { $: 'accumulate-sum', resultProp: 'posOfNext', toAdd: ({data}, {separator}) => data.length + separator.length }
         ]},
-        delta2delta: ({data},{cache, separator}) =>
+        delta2deltas: ({data},{cache, separator}) =>
                 Object.keys(data).filter(x=>x!='$orig').sort().reverse().map(id=> {
                     if (data.$orig[id] === undefined && Object.keys(cache).length == id) { // new elem (push)
                         return { $splice: {from: cache[id-1].posOfNext, itemsToRemove: 0, toAdd: separator + data[id] } }

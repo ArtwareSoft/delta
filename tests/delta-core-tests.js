@@ -18,9 +18,8 @@ jb.component('delta-test', {
         
         // calculate without incremental
         try {
-            const deltas = jb.toarray(delta)
             const cleanCtx = new jb.jbCtx()
-            const inputAfterDelta = jb.delta.applyDeltas(initialData,deltas)
+            const inputAfterDelta = jb.delta.applyDeltas(initialData,delta)
             const res = calculate(cleanCtx.setData(inputAfterDelta))
 
             const deltaFunc = Derive(calculate.profile, cleanCtx)
@@ -61,8 +60,8 @@ jb.component('delta-chain-no-cache', {
 jb.component('delta-accumulate-sum', {
     impl: {$: 'delta-test' ,
         calculate :{$: 'accumulate-sum', resultProp: 'sum', toAdd: '%v%' },
-        initialData :{$asIs: { 1: { v: 1}, 2: {v: 2}, 3: {v: 3} } },
-        delta :{$asIs: { 2: { v: 7 } }},
+        initialData :{$asIs: [ { v: 1}, {v: 2}, {v: 3} ] },
+        delta :{$asIs: { 1: { v: 7 } }},
     }
 })
 
