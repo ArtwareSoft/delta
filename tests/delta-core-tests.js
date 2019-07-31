@@ -76,24 +76,48 @@ jb.component('delta-chain-with-cache', {
 jb.component('delta-join-change-elem', {
     impl: {$: 'delta-test' ,
         calculate :{$: 'join', separator: ',' },
-        initialData :{$asIs: {0: 'a', 1: 'b', 2: 'c'} },
+        initialData :{$asIs: ['a','b','c'] },
         delta :{$asIs: { 1: 'bbb'} },
     }
 })
 
-jb.component('delta-join-add-elem', {
+jb.component('delta-join-push', {
     impl: {$: 'delta-test' ,
         calculate :{$: 'join', separator: ',' },
-        initialData :{$asIs: {0: 'a', 1: 'b', 2: 'c'} },
-        delta :{$asIs: { 3: 'd'} },
+        initialData :{$asIs: ['a','b','c'] },
+        delta :{$asIs: { $splice: { from: 3, itemsToRemove: 0, toAdd: ['d']} }},
     }
 })
 
-jb.component('delta-join-remove-elem', {
+jb.component('delta-join-splice', {
     impl: {$: 'delta-test' ,
         calculate :{$: 'join', separator: ',' },
-        initialData :{$asIs: {0: 'a', 1: 'b', 2: 'c'} },
-        delta :{$asIs: { 1: undefined} },
+        initialData :{$asIs: ['a','b','c'] },
+        delta :{$asIs: { $splice: { from: 1, itemsToRemove: 1, toAdd: ['d']}} },
+    }
+})
+
+jb.component('delta-join-splice2', {
+    impl: {$: 'delta-test' ,
+        calculate :{$: 'join', separator: ',' },
+        initialData :{$asIs: ['a','b','c'] },
+        delta :{$asIs: { $splice: { from: 1, itemsToRemove: 2, toAdd: ['d']}} },
+    }
+})
+
+jb.component('delta-join-splice-begin', {
+    impl: {$: 'delta-test' ,
+        calculate :{$: 'join', separator: ',' },
+        initialData :{$asIs: ['a','b','c'] },
+        delta :{$asIs: { $splice: { from: 0, itemsToRemove: 1, toAdd: ['d']}} },
+    }
+})
+
+jb.component('delta-join-splice-begin2', {
+    impl: {$: 'delta-test' ,
+        calculate :{$: 'join', separator: ',' },
+        initialData :{$asIs: ['a','b','c'] },
+        delta :{$asIs: { $splice: { from: 0, itemsToRemove: 2, toAdd: ['d']}} },
     }
 })
 

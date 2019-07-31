@@ -1,48 +1,26 @@
-var {Derive, deltas2deltas, toSingleDelta, asDarray} = jb.delta
+var {Derive, asDarray, deltaWithCache} = jb.delta
+
+deltas = {
+}
 
 jb.component('inc.delta-with-cache', {
     type: 'incremental',
     params: [
-        {id: 'delta2deltas', dynamic: true},
+        {id: 'init', dynamic: true},
+        {id: 'update', dynamic: true},
+        {id: 'splice', dynamic: true},
         {id: 'inputToCache', dynamic: true},
-        {id: 'vars', type: 'asIs'},
     ],
-    impl: (ctx, delta2deltas, inputToCache, vars) => ({
-        delta(dInputs,{cache, init} = {}) {
-            this.delta2deltaCache = this.delta2deltaCache || Derive(inputToCache.profile, ctx);
-
-            this.ctxWithVars = this.ctxWithVars || jb.entries(vars).reduce((resCtx, varEntry) => resCtx.setVars({[varEntry[0]]: resCtx.run(varEntry[1])}), ctx)
-            if (init) {
-                const ctxWithFullData = this.ctxWithVars.setData(toSingleDelta(dInputs))
-                const cacheResult = this.delta2deltaCache.delta(dInputs, {init})
-                return {
-                    dOutput: ctxWithFullData.run(ctx.vars.transformationFunc.profile), 
-                    dCache: { main: inputToCache(ctxWithFullData), inner: cacheResult.dCache }
-                }
-            }
-            const ctxWithCache = this.ctxWithVars.setVars({cache: cache.main })
-            const cacheRes = this.delta2deltaCache.delta(dInputs, {cache: cache.inner})
-            return { dOutput: deltas2deltas(dInputs, delta2deltas, ctxWithCache), dCache: { main: cacheRes.dOutput, inner: cacheRes.dCache } }
-        }
-    })
+    impl: ctx => jb.delta.deltaWithCache(ctx,ctx.vars)
 })
 
 jb.component('inc.delta-without-cache', {
     type: 'incremental',
     params: [
-        {id: 'delta2deltas', dynamic: true},
+        {id: 'update', dynamic: true},
+        {id: 'splice', dynamic: true},
     ],
-    impl: (ctx, delta2deltas) => ({
-        delta(dInputs, {init} = {}) {
-            if (init) {
-                const ctxWithFullData = ctx.setData(toSingleDelta(dInputs))
-                return {
-                    dOutput: ctxWithFullData.run(ctx.vars.transformationFunc.profile)
-                }
-            }
-            return { dOutput: deltas2deltas(dInputs, delta2deltas, ctx) }
-        }
-    })
+    impl: ctx => jb.delta.deltaWithoutCache(ctx,ctx.vars)
 })
 
 jb.component('chain', {
@@ -97,10 +75,15 @@ jb.component('inc.mapValues', {
     derivationOf: 'mapValues',
     type: 'incremental',
     impl: { $: 'inc.delta-without-cache', 
-        delta2deltas: (ctx,{transformationFunc}) => {
+        update: (ctx,{transformationFunc}) => {
             const mapProfile = transformationFunc.profile.$mapValues || transformationFunc.profile.map
             return jb.objFromEntries(jb.entries(ctx.data).map(e=>e[0] == '$orig' ? e : [e[0], ctx.setData(e[1]).run(mapProfile) ]))
-        }
+        },
+        splice: (ctx,{transformationFunc}) => {
+            const delta = ctx.data
+            const mapProfile = transformationFunc.profile.$mapValues || transformationFunc.profile.map
+            return Object.assign({}, delta.$splice, { toAdd: delta.$splice.toAdd.map(v=>ctx.setData(v).run(mapProfile)) })
+        },
     }
 })
 
@@ -123,7 +106,7 @@ jb.component('inc.accumulate-sum', {
     derivationOf: 'accumulate-sum',
     type: 'incremental',
     impl :{$: 'inc.delta-without-cache',
-        delta2deltas: (ctx, {transformationFunc}) => {
+        update: (ctx, {transformationFunc}) => {
             const delta = ctx.data
             return asDarray([delta, ...Object.keys(ctx.data).filter(x=>x!='$orig').map(key => {
                 const diff =  toAddOfKey(delta,key) - toAddOfKey(delta.$orig,key)
@@ -142,6 +125,7 @@ jb.component('inc.accumulate-sum', {
 })
 
 jb.component('join', {
+    type: 'aggregator',
     params: [
         {id: 'separator', as: 'string'}
     ],
@@ -152,8 +136,6 @@ jb.component('inc.join', {
     derivationOf: 'join',
     type: 'incremental',
     impl :{$: 'inc.delta-with-cache',
-        supportKeyChange: false, 
-        supportOrderChange: false, 
         $vars: {
            separator: ({},{transformationFunc}) => transformationFunc.profile.separator
         },
@@ -161,14 +143,22 @@ jb.component('inc.join', {
                 { $mapValues: ({data}) => ({length: data.length}) }, 
                 { $: 'accumulate-sum', resultProp: 'posOfNext', toAdd: ({data}, {separator}) => data.length + separator.length }
         ]},
-        delta2deltas: ({data},{cache, separator}) =>
+        splice: ({data},{cache, separator}) => {
+            const delta = data;
+            const from = delta.$splice.from ? cache[delta.$splice.from-1].posOfNext : 0;
+            const push = delta.$splice.from === cache.length
+            const itemsToRemove = cache.slice(delta.$splice.from, delta.$splice.from + delta.$splice.itemsToRemove).reduce((sum,item) => sum + item.length + separator.length, 0-separator.length)
+            const toAdd = (push ? separator : '') + delta.$splice.toAdd.join(separator)
+            return { $splice: {from, itemsToRemove, toAdd } }
+        },
+        update: ({data},{cache}) =>
                 Object.keys(data).filter(x=>x!='$orig').sort().reverse().map(id=> {
-                    if (data.$orig[id] === undefined && Object.keys(cache).length == id) { // new elem (push)
-                        return { $splice: {from: cache[id-1].posOfNext, itemsToRemove: 0, toAdd: separator + data[id] } }
-                    }
-                    if (data[id] === undefined) { // removed
-                        return { $splice: {from: cache[id-1].posOfNext, itemsToRemove: cache[id].length + separator.length, toAdd: '' } }
-                    }
+                    // if (data.$orig[id] === undefined && Object.keys(cache).length == id) { // new elem (push)
+                    //     return { $splice: {from: cache[id-1].posOfNext, itemsToRemove: 0, toAdd: separator + data[id] } }
+                    // }
+                    // if (data[id] === undefined) { // removed
+                    //     return { $splice: {from: cache[id-1].posOfNext, itemsToRemove: cache[id].length + separator.length, toAdd: '' } }
+                    // }
                     return { $splice: {from: cache[id-1] ? cache[id-1].posOfNext : 0, itemsToRemove: cache[id].length, toAdd: data[id] } }
                 })
     },
