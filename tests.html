@@ -6,13 +6,21 @@
         startTime = new Date().getTime();
         jbLoaderRelativePath = true;
         resources = {
-            delta: ['./src/delta-core.js','./src/core-delta-components.js','./tests/delta-core-tests.js']
+			delta: [
+			'./src/delta-core.js',
+			'./src/core-delta-components.js',
+			'./src/common-delta-components.js',
+			],
+			delta_tests: [
+			'./tests/delta-core-tests.js',
+			'./tests/delta-common-tests.js',
+			'./node_modules/jbart5-react/dist/jb-rx.js',
+			'./node_modules/jbart5-react/dist/testers.js',
+			]
         }
 	</script>
 	<script type="text/javascript" src="node_modules/jbart5-react/dist/jbart-core.js"></script>
-	<script type="text/javascript" src="node_modules/jbart5-react/dist/jb-rx.js"></script>
-	<script type="text/javascript" src="node_modules/jbart5-react/dist/testers.js"></script>
-	<script type="text/javascript" src="node_modules/jbart5-react/dist/jb-loader.js" modules="delta"></script>
+	<script type="text/javascript" src="node_modules/jbart5-react/dist/jb-loader.js" modules="delta,delta_tests"></script>
 	<style>
 		.editor { opacity: 0 }
 		.editor:hover { opacity: 1 }

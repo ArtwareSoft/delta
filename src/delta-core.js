@@ -31,6 +31,7 @@ delta_ops = {
     }
 }
 
+
 // apply the redux way
 function applyDelta(val,delta) {
     if (delta === undefined) return
@@ -129,6 +130,12 @@ jb.delta = {
             }
         },
     })
+}
+
+jb.propOfProfile = function(profile,prop) {
+    if (profile[prop]) return profile[prop];
+    const sugarProp = jb.entries(profile).filter(p=>p[0].indexOf('$') == 0 && p[0].length > 1)
+    return sugarProp[0] && sugarProp[0][1]
 }
 
 jb.mapValues = function(obj, mapFunc) {
