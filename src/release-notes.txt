@@ -1,0 +1,4 @@
+#0.1.1
+Move trnasofrmation and incremental into the same component
+No more 'Derive' the component returns delta,noDeltaTransform
+build: need to npm install to get latest jBart version

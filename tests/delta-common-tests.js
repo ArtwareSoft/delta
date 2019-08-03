@@ -6,7 +6,7 @@ jb.const('tasks', {
 
 jb.component('delta-select-outside', {
     impl: {$: 'delta-test' ,
-        calculate :{$select: 'work/done' },
+        transformation :{$select: 'work/done' },
         initialData: '%$tasks%',
         delta :{$asIs: { gym: {done: true} }},
     }
@@ -14,15 +14,15 @@ jb.component('delta-select-outside', {
 
 jb.component('delta-select-inside', {
     impl: {$: 'delta-test' ,
-        calculate :{$select: 'gym/done' },
+        transformation :{$select: 'gym/done' },
         initialData: '%$tasks%',
         delta :{$asIs: { gym: {done: true} }},
     }
 })
 
-jb.component('delta-select-*', {
+jb.component('delta-select-any', {
     impl: {$: 'delta-test' ,
-        calculate :{$select: '*/done' },
+        transformation :{$select: '*/done' },
         initialData: '%$tasks%',
         delta :{$asIs: { gym: {done: true} }},
     }
@@ -30,7 +30,7 @@ jb.component('delta-select-*', {
 
 // jb.component('delta-filter', {
 //     impl: {$: 'delta-test' ,
-//         calculate :{$filter: '%done%' },
+//         transformation :{$filter: '%done%' },
 //         initialData: '%$tasks%',
 //         delta :{$asIs: { gym: {done: true} }},
 //     }

@@ -1,17 +1,17 @@
 (function() {
-const {Derive, applyDeltas, toDarray} = jb.delta
+const {applyDeltas, toDarray} = jb.delta
 
 jb.component('delta-test', {
 	type: 'test',
 	params: [
-		{ id: 'calculate', dynamic: true },
+		{ id: 'transformation', type: 'with-delta-support' },
 		{ id: 'initialData' },
 		{ id: 'delta' },
 		{ id: 'expectedDeltaOutput' },
 		{ id: 'expectedCounters', as: 'single' },
 		{ id: 'cleanUp', type: 'action', dynamic: true },
 	],
-	impl: function(ctx,calculate,initialData,delta,expectedDeltaOutput,expectedCounters,cleanUp) {
+	impl: function(ctx,transformation,initialData,delta,expectedDeltaOutput,expectedCounters,cleanUp) {
 		if (expectedCounters) {
 			if (!jb.frame.wSpy.enabled())
 				jb.frame.initwSpy({wSpyParam: 'data-test,delta'})
@@ -23,15 +23,14 @@ jb.component('delta-test', {
 
             // calculate without incremental transformation
             const inputAfterDelta = jb.delta.applyDeltas(initialData,delta)
-            const res = calculate(cleanCtx.setData(inputAfterDelta))
+            const res = transformation.noDeltaTransform(ctx.setData(inputAfterDelta))
 
             // calculate with incremental transformation
-            const deltaFunc = Derive(calculate.profile, cleanCtx)
-            const initalResult = deltaFunc.delta(initialData, {init: true})
+            const initalResult = transformation.delta(initialData, {init: true})
             const firstOutput = applyDeltas({}, initalResult.dOutput)
             const cache = applyDeltas({}, initalResult.dCache)
             const deltaWithOrigin = jb.delta.enrichWithOrig(delta,initialData)
-            const resultAfterDelta = deltaFunc.delta(deltaWithOrigin, {cache})
+            const resultAfterDelta = transformation.delta(deltaWithOrigin, {cache})
             const resWithDelta = applyDeltas(firstOutput, resultAfterDelta.dOutput)
 
             const countersErr = countersErrors(expectedCounters);

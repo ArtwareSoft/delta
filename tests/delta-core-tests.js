@@ -1,6 +1,6 @@
 jb.component('delta-map-values', {
     impl: {$: 'delta-test' ,
-        calculate :{$mapValues: '-%%-' },
+        transformation :{$mapValues: '-%%-' },
         initialData :{$asIs: { 1: 'a', 2: 'b', 3: 'c'} },
         delta :{$asIs: { 2: 'bbbb' } },
         expectedDeltaOutput: {$asIs: { 2: '-bbbb-',  $orig: { 2: '-b-' } }}
@@ -9,7 +9,7 @@ jb.component('delta-map-values', {
 
 jb.component('delta-map-values-empty-delta-output', {
     impl: {$: 'delta-test' ,
-        calculate :{$mapValues: ({data}) => data > 0 ? 'positive' : 'negative' },
+        transformation :{$mapValues: ({data}) => data > 0 ? 'positive' : 'negative' },
         initialData :{$asIs: { 1: 1, 2: -2, 3: 5} },
         delta :{$asIs: { 2: -3 } },
         expectedDeltaOutput: {$asIs: null}
@@ -18,15 +18,16 @@ jb.component('delta-map-values-empty-delta-output', {
 
 jb.component('delta-chain-no-cache', {
     impl: {$: 'delta-test' ,
-        calculate :{$chain: [{ $mapValues: '-%%-' }, { $mapValues: '#%%#' }] },
+        transformation :{$chain: [{ $mapValues: '-%%-' }, { $mapValues: '#%%#' }] },
         initialData :{$asIs: { 1: 'a', 2: 'b', 3: 'c'} },
         delta :{$asIs: { 2: 'bbbb' } },
+        expectedDeltaOutput: {$asIs: { 2: '#-bbbb-#',  $orig: { 2: '#-b-#' } }}
     }
 })
 
 jb.component('delta-accumulate-sum', {
     impl: {$: 'delta-test' ,
-        calculate :{$: 'accumulate-sum', resultProp: 'sum', toAdd: '%v%' },
+        transformation :{$: 'accumulate-sum', resultProp: 'sum', toAdd: '%v%' },
         initialData :{$asIs: [ { v: 1}, {v: 2}, {v: 3} ] },
         delta :{$asIs: { 1: { v: 7 } }},
     }
@@ -34,7 +35,7 @@ jb.component('delta-accumulate-sum', {
 
 jb.component('delta-chain-with-cache', {
     impl: {$: 'delta-test' ,
-        calculate :{$chain: [{ $: 'accumulate-sum', resultProp: 'sum', toAdd: '%v%' }] },
+        transformation :{$chain: [{ $: 'accumulate-sum', resultProp: 'sum', toAdd: '%v%' }] },
         initialData :{$asIs: { 1: { v: 1}, 2: {v: 2}, 3: {v: 3} } },
         delta :{$asIs: { 2: { v: 7 } }},
     }
@@ -42,7 +43,7 @@ jb.component('delta-chain-with-cache', {
 
 jb.component('delta-join-change-elem', {
     impl: {$: 'delta-test' ,
-        calculate :{$: 'join', separator: ',' },
+        transformation :{$: 'join', separator: ',' },
         initialData :{$asIs: ['a','b','c'] },
         delta :{$asIs: { 1: 'bbb'} },
     }
@@ -50,7 +51,7 @@ jb.component('delta-join-change-elem', {
 
 jb.component('delta-join-push', {
     impl: {$: 'delta-test' ,
-        calculate :{$: 'join', separator: ',' },
+        transformation :{$: 'join', separator: ',' },
         initialData :{$asIs: ['a','b','c'] },
         delta :{$asIs: { $splice: { from: 3, itemsToRemove: 0, toAdd: ['d']} }},
     }
@@ -58,7 +59,7 @@ jb.component('delta-join-push', {
 
 jb.component('delta-join-splice', {
     impl: {$: 'delta-test' ,
-        calculate :{$: 'join', separator: ',' },
+        transformation :{$: 'join', separator: ',' },
         initialData :{$asIs: ['a','b','c'] },
         delta :{$asIs: { $splice: { from: 1, itemsToRemove: 1, toAdd: ['d']}} },
     }
@@ -66,7 +67,7 @@ jb.component('delta-join-splice', {
 
 jb.component('delta-join-splice2', {
     impl: {$: 'delta-test' ,
-        calculate :{$: 'join', separator: ',' },
+        transformation :{$: 'join', separator: ',' },
         initialData :{$asIs: ['a','b','c'] },
         delta :{$asIs: { $splice: { from: 1, itemsToRemove: 2, toAdd: ['d']}} },
     }
@@ -74,7 +75,7 @@ jb.component('delta-join-splice2', {
 
 jb.component('delta-join-splice-begin', {
     impl: {$: 'delta-test' ,
-        calculate :{$: 'join', separator: ',' },
+        transformation :{$: 'join', separator: ',' },
         initialData :{$asIs: ['a','b','c'] },
         delta :{$asIs: { $splice: { from: 0, itemsToRemove: 1, toAdd: ['d']}} },
     }
@@ -82,7 +83,7 @@ jb.component('delta-join-splice-begin', {
 
 jb.component('delta-join-splice-begin2', {
     impl: {$: 'delta-test' ,
-        calculate :{$: 'join', separator: ',' },
+        transformation :{$: 'join', separator: ',' },
         initialData :{$asIs: ['a','b','c'] },
         delta :{$asIs: { $splice: { from: 0, itemsToRemove: 2, toAdd: ['d']}} },
     }

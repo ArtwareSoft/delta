@@ -64,20 +64,19 @@ function asDarray(arr) {
 function toSingleDelta(deltas) {
     return deltas && deltas.$dArray ? deltas[0] : deltas
 }
-function Derive(profile,ctx) {
-    return {
-        delta(...args) {
-            this._deltaObj = this._deltaObj || ctx.setVars({transformationFunc: {profile,ctx}}).run(Object.assign({},profile, {$: `inc.${jb.compName(profile)}` }))
-            jb.log('delta',[...args])
-            return this._deltaObj.delta(...args)
-        }
-    }
-}
+// function Derive(profile,ctx) {
+//     return {
+//         delta(...args) {
+//             this._deltaObj = this._deltaObj || ctx.setVars({transformationFunc: {profile,ctx}}).run(Object.assign({},profile, {$: `inc.${jb.compName(profile)}` }))
+//             jb.log('delta',[...args])
+//             return this._deltaObj.delta(...args)
+//         }
+//     }
+// }
 
 const applyDeltas = (input, deltas) => toDarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input)
 
 jb.delta = {
-    Derive,
     toDarray,
     toSingleDelta,
     asDarray,
@@ -85,57 +84,53 @@ jb.delta = {
     enrichWithOrig: (obj,orig) => // todo: recursive
         Object.assign({},obj, {$orig: jb.objFromEntries(jb.entries(obj).filter(e=> e[0].indexOf('$') !== 0).map(e=>[e[0],orig[e[0]]])) }),
 
-    deltaWithCache: (ctx, {transformationFunc}) => ({
-        delta(dInputs,{cache, init} = {}) {
-            this.delta2deltaCache = this.delta2deltaCache || Derive(ctx.params.inputToCache.profile, ctx);
-            if (init) {
-                const ctxWithFullData = ctx.setData(toSingleDelta(dInputs))
-                const cacheResult = this.delta2deltaCache.delta(dInputs, {init: true})
-                return {
-                    dOutput: ctxWithFullData.run(transformationFunc.profile), 
-                    dCache: { main: ctx.params.inputToCache(ctxWithFullData), inner: cacheResult.dCache }
-                }
+    deltaWithCache(dInputs,{cache, init, noDeltaTransform} = {}, ctx) {
+        this.delta2deltaCache = this.delta2deltaCache || ctx.params.inputToCache(ctx);
+        if (init) {
+            const ctxWithFullData = ctx.setData(toSingleDelta(dInputs))
+            const cacheResult = this.delta2deltaCache.delta(dInputs, {init: true})
+            return {
+                dOutput: noDeltaTransform(ctxWithFullData), 
+                dCache: { main: ctx.params.inputToCache().noDeltaTransform(ctxWithFullData), inner: cacheResult.dCache }
             }
-            
-            let main = cache.main, inner = cache.inner;
-            const dCache = []
-            const dOutput = asDarray(toDarray(dInputs).reduce((dOutput,delta) => {
-                        const res = handleDeltaByType(ctx.setVars({cache: main}), delta)
-                        const cacheRes = this.delta2deltaCache.delta(dInputs, {cache: inner})
-                        main = applyDeltas(main, cacheRes.dOutput)
-                        inner = applyDeltas(inner, cacheRes.dCache)
-                        dCache.push({main: cacheRes.dOutput, inner: cacheRes.dCache})
-                        return dOutput.concat(jb.toarray(res))
-                    }   , []))
-            return { dOutput, dCache }
-
-            function handleDeltaByType(ctxWithCache, delta) {
-                if (delta.$splice)
-                    return ctx.params.splice(ctxWithCache.setData(delta))
-                return ctx.params.update(ctxWithCache.setData(delta))
-            }
-        },
-    }),
-    deltaWithoutCache: (ctx, {transformationFunc}) => ({
-        delta(dInputs,{cache, init} = {}) {
-            if (init) {
-                const ctxWithFullData = ctx.setData(toSingleDelta(dInputs))
-                return { dOutput: ctxWithFullData.run(transformationFunc.profile) }
-            }
-            
-            const dOutput = asDarray(toDarray(dInputs).reduce((dOutput,delta) => {
-                const res = handleDeltaByType(delta)
-                return dOutput.concat(res)
+        }
+        
+        let main = cache.main, inner = cache.inner;
+        const dCache = []
+        const dOutput = asDarray(toDarray(dInputs).reduce((dOutput,delta) => {
+                const res = handleDeltaByType(ctx.setVars({cache: main}), delta)
+                const cacheRes = this.delta2deltaCache.delta(dInputs, {cache: inner})
+                main = applyDeltas(main, cacheRes.dOutput)
+                inner = applyDeltas(inner, cacheRes.dCache)
+                dCache.push({main: cacheRes.dOutput, inner: cacheRes.dCache})
+                return dOutput.concat(jb.toarray(res))
             }   , []))
-            return { dOutput }
+        return { dOutput, dCache }
 
-            function handleDeltaByType(delta) {
-                if (delta.$splice)
-                    return ctx.params.splice(ctx.setData(delta))
-                return ctx.params.update(ctx.setData(delta))
-            }
-        },
-    })
+        function handleDeltaByType(ctxWithCache, delta) {
+            if (delta.$splice)
+                return ctx.params.splice(ctxWithCache.setData(delta))
+            return ctx.params.update(ctxWithCache.setData(delta))
+        }
+    },
+    deltaWithoutCache(dInputs,{init, noDeltaTransform} = {}, ctx) {
+        if (init) {
+            const ctxWithFullData = ctx.setData(toSingleDelta(dInputs))
+            return { dOutput: noDeltaTransform(ctxWithFullData) }
+        }
+        
+        const dOutput = asDarray(toDarray(dInputs).reduce((dOutput,delta) => {
+            const res = handleDeltaByType(delta)
+            return dOutput.concat(res)
+        }   , []))
+        return { dOutput }
+
+        function handleDeltaByType(delta) {
+            if (delta.$splice)
+                return ctx.params.splice(ctx.setData(delta))
+            return ctx.params.update(ctx.setData(delta))
+        }
+    },
 }
 
 jb.propOfProfile = function(profile,prop) {

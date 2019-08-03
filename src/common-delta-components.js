@@ -6,21 +6,14 @@ jb.component('join', {
     params: [
         {id: 'separator', as: 'string'}
     ],
-    impl: ({data},separator) => (Array.isArray(data) ? data :  jb.entries(data).map(e=>e[1])).join(separator)
-})
-
-jb.component('inc.join', {
-    derivationOf: 'join',
-    type: 'incremental',
-    impl :{$: 'inc.delta-with-cache',
-        $vars: {
-           separator: ({},{transformationFunc}) => jb.propOfProfile(transformationFunc.profile,'separator')
-        },
+    impl: {$:'with-delta-support', 
+        noDeltaTransform: ({data},{}, {separator}) => 
+            (Array.isArray(data) ? data :  jb.entries(data).map(e=>e[1])).join(separator),
         inputToCache :{$chain: [ 
                 { $mapValues: ({data}) => ({length: data.length}) }, 
-                { $: 'accumulate-sum', resultProp: 'posOfNext', toAdd: ({data}, {separator}) => data.length + separator.length }
+                { $: 'accumulate-sum', resultProp: 'posOfNext', toAdd: ({data},{},{separator}) => data.length + separator.length }
         ]},
-        splice: ({data},{cache, separator}) => {
+        splice: ({data},{cache},{separator}) => {
             const delta = data;
             const from = delta.$splice.from ? cache[delta.$splice.from-1].posOfNext : 0;
             const push = delta.$splice.from === cache.length
@@ -31,7 +24,7 @@ jb.component('inc.join', {
         update: ({data},{cache}) => Object.keys(data).filter(x=>x!='$orig').sort().reverse().map(id=>
                     ({ $splice: {from: cache[id-1] ? cache[id-1].posOfNext : 0, itemsToRemove: cache[id].length, toAdd: data[id] } })
                 )
-    },
+    }
 })
 
 function select(obj, path) {
@@ -54,58 +47,45 @@ function filterDeltaPropsByPath(obj, path) {
 }
 
 jb.component('select', {
-    multiplicty: 'oneToMany',
     params: [
         {id: 'path', as: 'string'}
     ],
-    impl: ({data},path) => select(data,path.split('/'))
-})
-
-jb.component('inc.select', {
-    derivationOf: 'select',
-    type: 'incremental',
-    impl :{$: 'inc.delta-without-cache',
-        $vars: {
-            selectPath: ({},{transformationFunc}) => jb.propOfProfile(transformationFunc.profile,'path').split('/')
-        },
-        update: ({data},{selectPath}) => filterDeltaPropsByPath(data,selectPath)
-    },
+    impl :{$: 'with-delta-support', 
+        noDeltaTransform: ({data},{},{path}) => select(data,path.split('/')),
+        update: ({data},{}, {path}) => filterDeltaPropsByPath(data, path.split('/'))
+    }
 })
 
 jb.component('accumulate-sum', {
+    type: 'with-delta-support',
     params: [
         { id: 'resultProp', as: 'string', essential: true},
         { id: 'startValue', as: 'number', defaultValue: 0 },
         { id: 'toAdd', dynamic: 'true', description: 'can use vars: item'}
     ],
-    impl: (ctx, prop, startValue, toAdd) => {
-        let acc = startValue
-        if (Array.isArray(ctx.data))
-            return ctx.data.map(item=> Object.assign({},item,{[prop]: acc = acc + toAdd(ctx.setData(item))}))
-        return jb.mapValues(ctx.data, item => Object.assign({},item, {[prop]: acc = acc + toAdd(ctx.setData(item))}))
-    }
-})
-
-jb.component('inc.accumulate-sum', {
-    derivationOf: 'accumulate-sum',
-    type: 'incremental',
-    impl :{$: 'inc.delta-without-cache',
-        update: (ctx, {transformationFunc}) => {
+    impl: {$:'with-delta-support', 
+        noDeltaTransform: (ctx,{}, {resultProp, startValue, toAdd}) => {
+            let acc = startValue
+            if (Array.isArray(ctx.data))
+                return ctx.data.map(item=> Object.assign({},item,{[resultProp]: acc = acc + toAdd(ctx.setData(item))}))
+            return jb.mapValues(ctx.data, item => Object.assign({},item, {[resultProp]: acc = acc + toAdd(ctx.setData(item))}))
+        },
+        update: (ctx,{}, {resultProp, toAdd}) => {
             const delta = ctx.data
-            return asDarray([delta, ...Object.keys(ctx.data).filter(x=>x!='$orig').map(key => {
+            return asDarray([delta, ...Object.keys(delta).filter(x=>x!='$orig').map(key => {
                 const diff =  toAddOfKey(delta,key) - toAddOfKey(delta.$orig,key)
                 return {
                     $linearAcc: {
                         after: key,
-                        delta: { [transformationFunc.profile.resultProp]: {$add: diff } }
+                        delta: { [resultProp]: {$add: diff } }
                 }}
             })])
 
             function toAddOfKey(deltaObj, key) {
-                return (deltaObj && deltaObj[key] && transformationFunc.ctx.setData(deltaObj[key]).run(transformationFunc.profile.toAdd)) || 0
+                return (deltaObj && deltaObj[key] && toAdd(ctx.setData(deltaObj[key]))) || 0
             }
         }
-    },
+    }
 })
 
 })()
