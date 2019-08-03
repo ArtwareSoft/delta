@@ -69,6 +69,7 @@ jb.delta = {
     Derive: (profile,ctx) => ({
         delta(...args) {
             this._deltaObj = this._deltaObj || ctx.setVars({transformationFunc: {profile,ctx}}).run(Object.assign({},profile, {$: `inc.${jb.compName(profile)}` }))
+            jb.log('delta',[...args])
             return this._deltaObj.delta(...args)
         },
     }),
