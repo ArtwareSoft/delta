@@ -83,8 +83,8 @@ jb.component('inc.mapValues', {
                 .filter(e=>e.newVal != e.orig)
             
             const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop,orig}) =>[prop, orig]))
-            return jb.objFromEntries(calcultedEntries.map(({prop,newVal}) =>[prop, newVal])
-                .concat([['$orig', newOrigEntry]]))
+            return calcultedEntries.length ? jb.objFromEntries(calcultedEntries.map(({prop,newVal}) =>[prop, newVal])
+                .concat([['$orig', newOrigEntry]])) : []
         },
         splice: (ctx,{transformationFunc}) => {
             const delta = ctx.data

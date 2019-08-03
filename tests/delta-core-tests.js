@@ -3,6 +3,16 @@ jb.component('delta-map-values', {
         calculate :{$mapValues: '-%%-' },
         initialData :{$asIs: { 1: 'a', 2: 'b', 3: 'c'} },
         delta :{$asIs: { 2: 'bbbb' } },
+        expectedDeltaOutput: {$asIs: { 2: '-bbbb-',  $orig: { 2: '-b-' } }}
+    }
+})
+
+jb.component('delta-map-values-empty-delta-output', {
+    impl: {$: 'delta-test' ,
+        calculate :{$mapValues: ({data}) => data > 0 ? 'positive' : 'negative' },
+        initialData :{$asIs: { 1: 1, 2: -2, 3: 5} },
+        delta :{$asIs: { 2: -3 } },
+        expectedDeltaOutput: {$asIs: null}
     }
 })
 

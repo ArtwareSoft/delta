@@ -1,27 +1,31 @@
-var {Derive, applyDeltas} = jb.delta
+(function() {
+const {Derive, applyDeltas, toDarray} = jb.delta
 
 jb.component('delta-test', {
 	type: 'test',
 	params: [
 		{ id: 'calculate', dynamic: true },
 		{ id: 'initialData' },
-		{ id: 'delta', as: 'array' },
+		{ id: 'delta' },
+		{ id: 'expectedDeltaOutput' },
+		{ id: 'expectedCounters', as: 'single' },
 		{ id: 'cleanUp', type: 'action', dynamic: true },
-		{ id: 'expectedCounters', as: 'single' }
 	],
-	impl: function(context,calculate,initialData,delta,cleanUp,expectedCounters) {
+	impl: function(ctx,calculate,initialData,delta,expectedDeltaOutput,expectedCounters,cleanUp) {
 		if (expectedCounters) {
 			if (!jb.frame.wSpy.enabled())
-				jb.frame.initwSpy({wSpyParam: 'data-test'})
+				jb.frame.initwSpy({wSpyParam: 'data-test,delta'})
 			jb.frame.wSpy.clear()
         }
         
-        // calculate without incremental
         try {
             const cleanCtx = new jb.jbCtx()
+
+            // calculate without incremental transformation
             const inputAfterDelta = jb.delta.applyDeltas(initialData,delta)
             const res = calculate(cleanCtx.setData(inputAfterDelta))
 
+            // calculate with incremental transformation
             const deltaFunc = Derive(calculate.profile, cleanCtx)
             const initalResult = deltaFunc.delta(initialData, {init: true})
             const firstOutput = applyDeltas({}, initalResult.dOutput)
@@ -31,12 +35,21 @@ jb.component('delta-test', {
             const resWithDelta = applyDeltas(firstOutput, resultAfterDelta.dOutput)
 
             const countersErr = countersErrors(expectedCounters);
-            const success = jb.compareObjects(resWithDelta,res) && !countersErr;
+            const deltaOutputErr = compareDeltaOutput(resultAfterDelta.dOutput);
+            const success = jb.compareObjects(resWithDelta,res) && !countersErr && !deltaOutputErr;
             cleanUp()
-            return { id: context.vars.testID, success, reason: countersErr}
+            return { id: ctx.vars.testID, success, reason: countersErr + deltaOutputErr}
+
+            function compareDeltaOutput(dOutput) {
+                if (!ctx.profile.expectedDeltaOutput || jb.compareObjects(dOutput,toDarray(expectedDeltaOutput))) 
+                    return ''
+                return 'delta output ' + jb.prettyPrint({actual: dOutput, expected: expectedDeltaOutput}, null,2)
+            }
         }
         catch(e) {
-            return { id: context.vars.testID, success: false, reason: 'exception ' + e.message}
+            return { id: ctx.vars.testID, success: false, reason: 'exception ' + e.message}
         }
 	}
 })
+
+})()

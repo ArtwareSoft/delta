@@ -51,7 +51,7 @@ function applyDelta(val,delta) {
 
 function toDarray(delta) {
     if (delta === null || delta === undefined)
-        return []
+        return asDarray([])
     return delta.$dArray ? delta : asDarray([delta])
 }
 
@@ -64,19 +64,24 @@ function asDarray(arr) {
 function toSingleDelta(deltas) {
     return deltas && deltas.$dArray ? deltas[0] : deltas
 }
-
-jb.delta = {
-    Derive: (profile,ctx) => ({
+function Derive(profile,ctx) {
+    return {
         delta(...args) {
             this._deltaObj = this._deltaObj || ctx.setVars({transformationFunc: {profile,ctx}}).run(Object.assign({},profile, {$: `inc.${jb.compName(profile)}` }))
             jb.log('delta',[...args])
             return this._deltaObj.delta(...args)
-        },
-    }),
+        }
+    }
+}
+
+const applyDeltas = (input, deltas) => toDarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input)
+
+jb.delta = {
+    Derive,
     toDarray,
     toSingleDelta,
     asDarray,
-    applyDeltas: (input, deltas) => toDarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input),
+    applyDeltas,
     enrichWithOrig: (obj,orig) => // todo: recursive
         Object.assign({},obj, {$orig: jb.objFromEntries(jb.entries(obj).filter(e=> e[0].indexOf('$') !== 0).map(e=>[e[0],orig[e[0]]])) }),
 
