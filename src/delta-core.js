@@ -44,7 +44,7 @@ function applyDelta(val,delta) {
     if (typeof delta === 'object' && !Array.isArray(delta)) {
         const res = Array.isArray(val) ? val.slice(0) : Object.assign({},val); // clone
         Object.keys(delta).filter(key=> key !== '$orig').forEach(key => res[key] = applyDelta(val[key], delta[key]))
-        return res
+        return cleanUndefined(res)
     }
     return delta; // primitive without op
 }
@@ -64,15 +64,8 @@ function asDarray(arr) {
 function toSingleDelta(deltas) {
     return deltas && deltas.$dArray ? deltas[0] : deltas
 }
-// function Derive(profile,ctx) {
-//     return {
-//         delta(...args) {
-//             this._deltaObj = this._deltaObj || ctx.setVars({transformationFunc: {profile,ctx}}).run(Object.assign({},profile, {$: `inc.${jb.compName(profile)}` }))
-//             jb.log('delta',[...args])
-//             return this._deltaObj.delta(...args)
-//         }
-//     }
-// }
+
+const cleanUndefined = obj => jb.objFromEntries(jb.entries(obj).filter(e=> e[1] !== undefined))
 
 const applyDeltas = (input, deltas) => toDarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input)
 

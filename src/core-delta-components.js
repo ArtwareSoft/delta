@@ -1,7 +1,3 @@
-(function() {
-
-//const {Derive, deltaWithCache} = jb.delta
-
 jb.component('with-delta-support', {
     type: 'with-delta-support',
     params: [
@@ -76,4 +72,31 @@ jb.component('chain', {
     })
 })
 
-})()
+jb.component('filter', {
+    type: 'with-delta-support',
+    params: [
+        {id: 'exp', dynamic: true}
+    ],
+    impl: {$: 'with-delta-support',
+        noDeltaTransform: (ctx,{},{exp}) => Array.isArray(ctx.data)
+            ? ctx.data.filter(item=>exp(ctx.setData(item)))
+            : jb.objFromEntries(jb.entries(ctx.data).filter(e=>exp(ctx.setData(e[1])))),
+
+        update: (ctx,{},{exp}) => {
+            const calcultedEntries = jb.entries(ctx.data).filter(e=>e[0] != '$orig')
+                .map(e=>({ prop: e[0], 
+                    orig: !!exp(ctx.setData(ctx.data.$orig[e[0]])), 
+                    newVal: !!exp(ctx.setData(e[1])) }))
+                .filter(e=>e.newVal != e.orig)
+            
+            const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop}) =>[prop, ctx.data.$orig[prop]]))
+            return calcultedEntries.length ? jb.objFromEntries(calcultedEntries.map(({prop, newVal}) =>[prop, newVal ? ctx.data[prop] : undefined])
+                .concat([['$orig', newOrigEntry]])) : []
+        },
+        splice: (ctx,{},{exp}) => {
+            const delta = ctx.data
+            const toAdd = delta.$splice.toAdd.map(v=> exp(ctx.setData(v)) ? v : undefined ).filter(x=>x !== undefined)
+            return Object.assign({}, delta.$splice, {toAdd})
+        }
+    }
+})

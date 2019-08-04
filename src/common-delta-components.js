@@ -1,5 +1,4 @@
 (function() {
-const {asDarray} = jb.delta
 
 jb.component('join', {
     multiplicty: 'manyToOne',
@@ -43,7 +42,7 @@ function filterDeltaPropsByPath(obj, path) {
         : obj[path[0]] ? [[path[0], filterDeltaPropsByPath(obj[path[0]], path.slice(1)) ]] : []
 
     const orig = obj.$orig ? [['$orig', filterDeltaPropsByPath(obj.$orig, path)]] : []
-    return jb.objFromEntries(resEntries.concat(orig))
+    return resEntries.length ? jb.objFromEntries(resEntries.concat(orig)) : []
 }
 
 jb.component('select', {
@@ -72,7 +71,7 @@ jb.component('accumulate-sum', {
         },
         update: (ctx,{}, {resultProp, toAdd}) => {
             const delta = ctx.data
-            return asDarray([delta, ...Object.keys(delta).filter(x=>x!='$orig').map(key => {
+            return jb.delta.asDarray([delta, ...Object.keys(delta).filter(x=>x!='$orig').map(key => {
                 const diff =  toAddOfKey(delta,key) - toAddOfKey(delta.$orig,key)
                 return {
                     $linearAcc: {

@@ -37,12 +37,13 @@ jb.component('delta-test', {
             const deltaOutputErr = compareDeltaOutput(resultAfterDelta.dOutput);
             const success = jb.compareObjects(resWithDelta,res) && !countersErr && !deltaOutputErr;
             cleanUp()
-            return { id: ctx.vars.testID, success, reason: countersErr + deltaOutputErr}
+            const deltaAsStr = jb.prettyPrint(delta, {showNulls: true}) + ' => ' + jb.prettyPrint(resultAfterDelta.dOutput, {showNulls: true}) 
+            return { id: ctx.vars.testID, success, reason: (countersErr + deltaOutputErr) || deltaAsStr}
 
             function compareDeltaOutput(dOutput) {
                 if (!ctx.profile.expectedDeltaOutput || jb.compareObjects(dOutput,toDarray(expectedDeltaOutput))) 
                     return ''
-                return 'delta output ' + jb.prettyPrint({actual: dOutput, expected: expectedDeltaOutput}, null,2)
+                return 'delta output ' + jb.prettyPrint({actual: dOutput, expected: expectedDeltaOutput}, {showNulls: true})
             }
         }
         catch(e) {

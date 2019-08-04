@@ -28,10 +28,34 @@ jb.component('delta-select-any', {
     }
 })
 
-// jb.component('delta-filter', {
-//     impl: {$: 'delta-test' ,
-//         transformation :{$filter: '%done%' },
-//         initialData: '%$tasks%',
-//         delta :{$asIs: { gym: {done: true} }},
-//     }
-// })
+jb.component('delta-filter-false2true', {
+    impl: {$: 'delta-test' ,
+        transformation :{$filter: '%done%' },
+        initialData: '%$tasks%',
+        delta :{$asIs: { gym: {done: true} }},
+    }
+})
+
+jb.component('delta-filter-true2false', {
+    impl: {$: 'delta-test' ,
+        transformation :{$filter: '%done%' },
+        initialData: '%$tasks%',
+        delta :{$asIs: { tennis: {done: false} }},
+    }
+})
+
+jb.component('delta-filter-keep-true', {
+    impl: {$: 'delta-test' ,
+        transformation :{$filter: '%done%' },
+        initialData: '%$tasks%',
+        delta :{$asIs: { tennis: {done: true} }},
+    }
+})
+
+jb.component('delta-filter-keep-false', {
+    impl: {$: 'delta-test' ,
+        transformation :{$filter: '%done%' },
+        initialData: '%$tasks%',
+        delta :{$asIs: { gym: {done: false} }},
+    }
+})
