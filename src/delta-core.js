@@ -37,7 +37,7 @@ function applyDelta(val,delta) {
     if (delta === undefined) return
     if (val === undefined && delta && typeof delta === 'object')
         val = {}
-    const op = Object.keys(delta_ops).filter(k => delta['$'+k] )[0];
+    const op = Object.keys(delta_ops).filter(k => delta['$'+k] !== undefined)[0];
     if (op)
         return delta_ops[op](delta,val)
     

@@ -59,3 +59,51 @@ jb.component('delta-filter-keep-false', {
         delta :{$asIs: { gym: {done: false} }},
     }
 })
+
+jb.component('delta-count-no-change', {
+    impl: {$: 'delta-test' ,
+        transformation :{$: 'count' },
+        initialData: {$asIs: [0,1,2]},
+        delta :{$asIs: { 1: 77 }},
+    }
+})
+
+jb.component('delta-count-add', {
+    impl: {$: 'delta-test' ,
+        transformation :{$: 'count' },
+        initialData: {$asIs: [0,1,2]},
+        delta :{$asIs: { 3: 77 }},
+    }
+})
+
+jb.component('delta-count-remove', {
+    impl: {$: 'delta-test' ,
+        transformation :{$: 'count' },
+        initialData: {$asIs: [0,1,2]},
+        delta :{$asIs: { 1: undefined }},
+    }
+})
+
+jb.component('delta-filter-count-pipline-add', {
+    impl: {$: 'delta-test' ,
+        transformation :{$chain: [ {$filter: ({data}) => data < 2 }, {$: 'count' }]},
+        initialData: {$asIs: [0,1,2]},
+        delta :{$asIs: { 2: 0 }},
+    }
+})
+
+jb.component('delta-filter-count-pipline-remove', {
+    impl: {$: 'delta-test' ,
+        transformation :{$chain: [ {$filter: ({data}) => data < 2 }, {$: 'count' }]},
+        initialData: {$asIs: [0,1,2]},
+        delta :{$asIs: { 1: 5 }},
+    }
+})
+
+jb.component('delta-filter-count-pipline-no-change', {
+    impl: {$: 'delta-test' ,
+        transformation :{$chain: [ {$filter: ({data}) => data < 2 }, {$: 'count' }]},
+        initialData: {$asIs: [0,1,2]},
+        delta :{$asIs: { 0: 1 }},
+    }
+})

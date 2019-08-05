@@ -87,4 +87,18 @@ jb.component('accumulate-sum', {
     }
 })
 
+jb.component('count', {
+    multiplicty: 'manyToOne',
+    impl: {$:'with-delta-support', 
+        noDeltaTransform: ({data},{}, {separator}) => 
+            Array.isArray(data) ? data.length : Object.keys(data).length - (data.$orig ? 1 : 0),
+        splice: ({data}) => ({ $add:  data.$splice.itemsToRemove - data.$splice.toAdd.length }),
+        update: ({data}) => {
+            const toAdd = Object.keys(data).filter(x=>x!='$orig').map(key => data.$orig[key] === undefined ? 1 : (data[key] === undefined ? -1 : 0))
+            return ({ $add: toAdd.reduce((sum,item) => sum + item,0) })
+        }
+    }
+})
+
+
 })()

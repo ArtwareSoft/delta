@@ -8,9 +8,13 @@ jb.component('with-delta-support', {
     ],
     impl: (ctx,noDeltaTransform) => ({
         noDeltaTransform: ctx2 => noDeltaTransform(ctx2),
-        delta: (dInputs,options) => ctx.params.inputToCache.profile
+        delta: (dInputs,options = {}) => {
+            const delta = ctx.params.inputToCache.profile
             ? jb.delta.deltaWithCache(dInputs, Object.assign({noDeltaTransform},options), ctx)
             : jb.delta.deltaWithoutCache(dInputs, Object.assign({noDeltaTransform},options), ctx)
+            jb.log('deltaRes', [ctx.componentContext && ctx.componentContext.callerPath, options.init, delta, dInputs,options, ctx])
+            return delta
+        }
     })
 })
 
@@ -89,7 +93,7 @@ jb.component('filter', {
                     newVal: !!exp(ctx.setData(e[1])) }))
                 .filter(e=>e.newVal != e.orig)
             
-            const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop}) =>[prop, ctx.data.$orig[prop]]))
+            const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop,orig}) =>[prop, orig ? ctx.data.$orig[prop] : undefined]))
             return calcultedEntries.length ? jb.objFromEntries(calcultedEntries.map(({prop, newVal}) =>[prop, newVal ? ctx.data[prop] : undefined])
                 .concat([['$orig', newOrigEntry]])) : []
         },
