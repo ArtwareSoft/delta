@@ -1,3 +1,7 @@
+(function () {
+
+const {deltaTest, mapValues, chain, data, join, accumulateSum, select, filter, count} = jb.profiles
+
 jb.const('tasks', {
     'gym': { done: false},
     'tennis': { done: true},
@@ -5,105 +9,107 @@ jb.const('tasks', {
 })
 
 jb.component('delta-select-outside', {
-    impl: {$: 'delta-test' ,
-        transformation :{$select: 'work/done' },
+    impl: deltaTest({
+        transformation: select('work/done'),
         initialData: '%$tasks%',
-        delta :{$asIs: { gym: {done: true} }},
-    }
+        delta: data({ gym: {done: true} }),
+    })
 })
 
 jb.component('delta-select-inside', {
-    impl: {$: 'delta-test' ,
-        transformation :{$select: 'gym/done' },
+    impl: deltaTest({
+        transformation: select('gym/done'),
         initialData: '%$tasks%',
-        delta :{$asIs: { gym: {done: true} }},
-    }
+        delta: data({ gym: {done: true} }),
+    })
 })
 
 jb.component('delta-select-any', {
-    impl: {$: 'delta-test' ,
-        transformation :{$select: '*/done' },
+    impl: deltaTest({
+        transformation: select('*/done'),
         initialData: '%$tasks%',
-        delta :{$asIs: { gym: {done: true} }},
-    }
+        delta: data({ gym: {done: true} }),
+    })
 })
 
 jb.component('delta-filter-false2true', {
-    impl: {$: 'delta-test' ,
-        transformation :{$filter: '%done%' },
+    impl: deltaTest({
+        transformation: filter('%done%'),
         initialData: '%$tasks%',
-        delta :{$asIs: { gym: {done: true} }},
-    }
+        delta: data({ gym: {done: true} }),
+    })
 })
 
 jb.component('delta-filter-true2false', {
-    impl: {$: 'delta-test' ,
-        transformation :{$filter: '%done%' },
+    impl: deltaTest({
+        transformation: filter('%done%'),
         initialData: '%$tasks%',
-        delta :{$asIs: { tennis: {done: false} }},
-    }
+        delta: data({ tennis: {done: false} }),
+    })
 })
 
 jb.component('delta-filter-keep-true', {
-    impl: {$: 'delta-test' ,
-        transformation :{$filter: '%done%' },
+    impl: deltaTest({
+        transformation: filter('%done%'),
         initialData: '%$tasks%',
-        delta :{$asIs: { tennis: {done: true} }},
-    }
+        delta: data({ tennis: {done: true} }),
+    })
 })
 
 jb.component('delta-filter-keep-false', {
-    impl: {$: 'delta-test' ,
-        transformation :{$filter: '%done%' },
+    impl: deltaTest({
+        transformation: filter('%done%'),
         initialData: '%$tasks%',
-        delta :{$asIs: { gym: {done: false} }},
-    }
+        delta: data({ gym: {done: false} }),
+    })
 })
 
 jb.component('delta-count-no-change', {
-    impl: {$: 'delta-test' ,
-        transformation :{$: 'count' },
-        initialData: {$asIs: [0,1,2]},
-        delta :{$asIs: { 1: 77 }},
-    }
+    impl: deltaTest({
+        transformation: count(),
+        initialData: data([0,1,2]),
+        delta: data({ 1: 77 }),
+    })
 })
 
 jb.component('delta-count-add', {
-    impl: {$: 'delta-test' ,
-        transformation :{$: 'count' },
-        initialData: {$asIs: [0,1,2]},
-        delta :{$asIs: { 3: 77 }},
-    }
+    impl: deltaTest({
+        transformation: count(),
+        initialData: data([0,1,2]),
+        delta: data({ 3: 77 }),
+    })
 })
 
 jb.component('delta-count-remove', {
-    impl: {$: 'delta-test' ,
-        transformation :{$: 'count' },
-        initialData: {$asIs: [0,1,2]},
-        delta :{$asIs: { 1: undefined }},
-    }
+    impl: deltaTest({
+        transformation: count(),
+        initialData: data([0,1,2]),
+        delta: data({ 1: undefined }),
+    })
 })
 
 jb.component('delta-filter-count-pipline-add', {
-    impl: {$: 'delta-test' ,
-        transformation :{$chain: [ {$filter: ({data}) => data < 2 }, {$: 'count' }]},
-        initialData: {$asIs: [0,1,2]},
-        delta :{$asIs: { 2: 0 }},
-    }
+    impl: deltaTest({
+        transformation: chain(filter(({data}) => data < 2), count()),
+        initialData: data([0,1,2]),
+        delta: data({ 2: 0 }),
+    })
 })
 
 jb.component('delta-filter-count-pipline-remove', {
-    impl: {$: 'delta-test' ,
-        transformation :{$chain: [ {$filter: ({data}) => data < 2 }, {$: 'count' }]},
-        initialData: {$asIs: [0,1,2]},
-        delta :{$asIs: { 1: 5 }},
-    }
+    impl: deltaTest({
+        transformation: chain(filter(({data}) => data < 2), count()),
+        initialData: data([0,1,2]),
+        delta: data({ 1: 5 }),
+    })
 })
 
 jb.component('delta-filter-count-pipline-no-change', {
-    impl: {$: 'delta-test' ,
-        transformation :{$chain: [ {$filter: ({data}) => data < 2 }, {$: 'count' }]},
-        initialData: {$asIs: [0,1,2]},
-        delta :{$asIs: { 0: 1 }},
-    }
+    impl: deltaTest({
+        transformation: chain(filter(({data}) => data < 2), count()),
+        initialData: data([0,1,2]),
+        delta: data({ 0: 1 }),
+    })
 })
+
+})()

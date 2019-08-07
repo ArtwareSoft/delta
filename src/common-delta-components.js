@@ -1,4 +1,10 @@
 (function() {
+jb.component('data', {
+    params: [
+        { id: 'data', ignore: true },
+    ],
+    impl: ctx => ctx.profile.data
+})
 
 jb.component('join', {
     multiplicty: 'manyToOne',
@@ -57,10 +63,11 @@ jb.component('select', {
 
 jb.component('accumulate-sum', {
     type: 'with-delta-support',
+    usageByValue: true,
     params: [
-        { id: 'resultProp', as: 'string', essential: true},
+        { id: 'resultProp', as: 'string', mandatory: true},
+        { id: 'toAdd', dynamic: 'true' },
         { id: 'startValue', as: 'number', defaultValue: 0 },
-        { id: 'toAdd', dynamic: 'true', description: 'can use vars: item'}
     ],
     impl: {$:'with-delta-support', 
         noDeltaTransform: (ctx,{}, {resultProp, startValue, toAdd}) => {
