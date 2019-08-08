@@ -6,9 +6,15 @@ type param = {
 	essential?: boolean,
 	dynamic?: boolean,
 }
+type profiles = {
+	join(separator: dataType) : with_delta_supportType,
+	deltaTest({transformation: with_delta_supportType,initialData: dataType,delta: dataType,expectedDeltaOutput: dataType,expectedCounters: dataType,cleanUp: actionType}) : testType,
+}
+
 type jbObj = {
 	component(id: string, componentDef: cmpDef) : void,
-	comps: [cmpDef]
+	comps: [cmpDef],
+	profiles: profiles
 }
 type ctx = {
 	setVars({any}) : ctx,
@@ -20,77 +26,22 @@ declare var jb: jbObj;
 
 
 
-// type incremental
-type incrementalType = inc_joinPT | inc_selectPT | inc_accumulate_sumPT | inc_delta_with_cachePT | inc_delta_without_cachePT | inc_chainPT | inc_mapValuesPT | inc_filterPT | ((ctx: ctx) => any)
-type cmp_def_incrementalType = {
-	type: 'incremental',
-	params?: [param],
-	impl: incrementalType,
-}
-type inc_joinPT = {$: 'inc.join', }
-type inc_selectPT = {$: 'inc.select', }
-type inc_accumulate_sumPT = {$: 'inc.accumulate-sum', }
-type inc_delta_with_cachePT = {$: 'inc.delta-with-cache', init: dataType,update: dataType,splice: dataType,inputToCache: dataType}
-type inc_delta_without_cachePT = {$: 'inc.delta-without-cache', update: dataType,splice: dataType}
-type inc_chainPT = {$: 'inc.chain', }
-type inc_mapValuesPT = {$: 'inc.mapValues', }
-type inc_filterPT = {$: 'inc.filter', }
 
 // type with-delta-support
-type with_delta_supportType = with_delta_supportPT | mapValuesPT | ((ctx: ctx) => any)
+type with_delta_supportType = joinPT | selectPT | accumulate_sumPT | countPT | with_delta_supportPT | mapValuesPT | chainPT | filterPT | ((ctx: ctx) => any)
 type cmp_def_with_delta_supportType = {
 	type: 'with_delta_support',
 	params?: [param],
 	impl: with_delta_supportType,
 }
-type with_delta_supportPT = {$: 'with-delta-support', noDeltaTransform: dataType,init: dataType,update: dataType,splice: dataType,inputToCache: dataType}
-type mapValuesPT = {$: 'mapValues', map: dataType}
-
-// type data
-type dataType = joinPT | selectPT | accumulate_sumPT | chainPT | mapValues2PT | filterPT | delta_select_outsidePT | delta_select_insidePT | delta_select_anyPT | delta_filterPT | delta_map_valuesPT | delta_map_values_empty_delta_outputPT | delta_chain_no_cachePT | delta_accumulate_sumPT | delta_chain_with_cachePT | delta_join_change_elemPT | delta_join_pushPT | delta_join_splicePT | delta_join_splice2PT | delta_join_splice_beginPT | delta_join_splice_begin2PT | ((ctx: ctx) => any)
-type cmp_def_dataType = {
-	type: 'data',
-	params?: [param],
-	impl: dataType,
-}
 type joinPT = {$: 'join', separator: dataType}
 type selectPT = {$: 'select', path: dataType}
-type accumulate_sumPT = {$: 'accumulate-sum', resultProp: dataType,startValue: dataType,
-/** can use vars: item */toAdd: dataType}
+type accumulate_sumPT = {$: 'accumulate-sum', resultProp: dataType,toAdd: dataType,startValue: dataType}
+type countPT = {$: 'count', }
+type with_delta_supportPT = {$: 'with-delta-support', noDeltaTransform: dataType,update: dataType,splice: dataType,inputToCache: dataType}
+type mapValuesPT = {$: 'mapValues', map: dataType}
 type chainPT = {$: 'chain', items: [dataType]}
-type mapValues2PT = {$: 'mapValues2', map: dataType}
 type filterPT = {$: 'filter', exp: dataType}
-type delta_select_outsidePT = {$: 'delta-select-outside', }
-type delta_select_insidePT = {$: 'delta-select-inside', }
-type delta_select_anyPT = {$: 'delta-select-any', }
-type delta_filterPT = {$: 'delta-filter', }
-type delta_map_valuesPT = {$: 'delta-map-values', }
-type delta_map_values_empty_delta_outputPT = {$: 'delta-map-values-empty-delta-output', }
-type delta_chain_no_cachePT = {$: 'delta-chain-no-cache', }
-type delta_accumulate_sumPT = {$: 'delta-accumulate-sum', }
-type delta_chain_with_cachePT = {$: 'delta-chain-with-cache', }
-type delta_join_change_elemPT = {$: 'delta-join-change-elem', }
-type delta_join_pushPT = {$: 'delta-join-push', }
-type delta_join_splicePT = {$: 'delta-join-splice', }
-type delta_join_splice2PT = {$: 'delta-join-splice2', }
-type delta_join_splice_beginPT = {$: 'delta-join-splice-begin', }
-type delta_join_splice_begin2PT = {$: 'delta-join-splice-begin2', }
-
-// type aggregator
-type aggregatorType =  | ((ctx: ctx) => any)
-type cmp_def_aggregatorType = {
-	type: 'aggregator',
-	params?: [param],
-	impl: aggregatorType,
-}
-
-// type boolean
-type booleanType =  | ((ctx: ctx) => any)
-type cmp_def_booleanType = {
-	type: 'boolean',
-	params?: [param],
-	impl: booleanType,
-}
 
 // type test
 type testType = delta_testPT | ((ctx: ctx) => any)
@@ -100,4 +51,4 @@ type cmp_def_testType = {
 	impl: testType,
 }
 type delta_testPT = {$: 'delta-test', transformation: with_delta_supportType,initialData: dataType,delta: dataType,expectedDeltaOutput: dataType,expectedCounters: dataType,cleanUp: actionType}
-type cmpDef = cmp_def_incrementalType | cmp_def_with_delta_supportType | cmp_def_dataType | cmp_def_aggregatorType | cmp_def_booleanType | cmp_def_testType
+type cmpDef = cmp_def_with_delta_supportType | cmp_def_testType

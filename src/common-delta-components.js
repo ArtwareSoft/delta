@@ -1,4 +1,5 @@
 (function() {
+
 jb.component('data', {
     params: [
         { id: 'data', ignore: true },
@@ -7,9 +8,10 @@ jb.component('data', {
 })
 
 jb.component('join', {
+    type: 'with-delta-support',
     multiplicty: 'manyToOne',
     params: [
-        {id: 'separator', as: 'string'}
+        {id: 'separator', as: 'string', defaultValue: ','}
     ],
     impl: {$:'with-delta-support', 
         noDeltaTransform: ({data},{}, {separator}) => 
@@ -52,6 +54,7 @@ function filterDeltaPropsByPath(obj, path) {
 }
 
 jb.component('select', {
+    type: 'with-delta-support',
     params: [
         {id: 'path', as: 'string'}
     ],
@@ -72,8 +75,6 @@ jb.component('accumulate-sum', {
     impl: {$:'with-delta-support', 
         noDeltaTransform: (ctx,{}, {resultProp, startValue, toAdd}) => {
             let acc = startValue
-            if (Array.isArray(ctx.data))
-                return ctx.data.map(item=> Object.assign({},item,{[resultProp]: acc = acc + toAdd(ctx.setData(item))}))
             return jb.mapValues(ctx.data, item => Object.assign({},item, {[resultProp]: acc = acc + toAdd(ctx.setData(item))}))
         },
         update: (ctx,{}, {resultProp, toAdd}) => {
@@ -95,6 +96,7 @@ jb.component('accumulate-sum', {
 })
 
 jb.component('count', {
+    type: 'with-delta-support',
     multiplicty: 'manyToOne',
     impl: {$:'with-delta-support', 
         noDeltaTransform: ({data},{}, {separator}) => 
@@ -105,6 +107,60 @@ jb.component('count', {
             return ({ $add: toAdd.reduce((sum,item) => sum + item,0) })
         }
     }
+})
+
+function objFromProperties(props,ctx) {
+    return jb.objFromEntries(props.map(p=>[p.title, jb.tojstype(p.val(ctx),p.type)]))
+}
+function removeEntries(obj, keys) {
+    keys.foreach(k=> delete obj[key])
+}
+
+jb.component('extend', {
+    type: 'with-delta-support',
+    params: [
+        {id: 'props', type: 'prop[]', mandatory: true, defaultValue: []}
+    ],
+    impl: {$: 'with-delta-support',
+        noDeltaTransform: (ctx,{},{props}) => 
+            jb.mapValues(ctx.data, item => 
+                Object.assign(item, objFromProperties(props,ctx.setData(item)))),
+
+        update: (ctx,{},{props}) => {
+            const calcultedEntries = jb.entries(ctx.data).filter(e=>e[0] != '$orig')
+                .map(e=> {
+                    const orig = objFromProperties(props,ctx.setData(ctx.data.$orig[e[0]]))
+                    const newVal = objFromProperties(props,ctx.setData(e[1]))
+                    Object.keys(orig).foreach(key=> {
+                        if (jb.objectEquals(newVal[key],orig[key])) {
+                            delete newVal[key]
+                            delete orig[key]
+                        }
+                    })
+                    return { prop: e[0], orig, newVal }
+                })
+                .filter(e=> Object.keys(e.newVal).length)
+            
+            const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop,orig}) =>[prop, orig]))
+            return calcultedEntries.length ? jb.objFromEntries(calcultedEntries.map(({prop,newVal}) =>[prop, newVal])
+                .concat([['$orig', newOrigEntry]])) : []
+        },
+        splice: (ctx,{},{map}) => {
+            const delta = ctx.data
+            return Object.assign({}, delta.$splice, { toAdd: delta.$splice.toAdd.map(v=> map(ctx.setData(v))) })
+        }
+    }
+})
+
+jb.component('prop', { 
+	type: 'prop',
+	usageByValue: true,
+	params: [
+		{ id: 'title', as: 'string', mandatory: true },
+		{ id: 'val', dynamic: 'true', type: 'data', mandatory: true },
+		{ id: 'type', as: 'string', options: 'string,number,boolean', defaultValue: 'string' },
+	],
+	impl: ctx => ctx.params
 })
 
 

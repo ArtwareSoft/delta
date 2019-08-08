@@ -56,7 +56,7 @@ jb.component('delta-chain-with-cache', {
 
 jb.component('delta-join-change-elem', {
     impl: deltaTest({
-        transformation: join(','),
+        transformation: join(),
         initialData: data(['a','b','c']),
         delta: data({ 1: 'bbb'}),
     })
@@ -64,7 +64,7 @@ jb.component('delta-join-change-elem', {
 
 jb.component('delta-join-push', {
     impl: deltaTest({
-        transformation: join(','),
+        transformation: join(),
         initialData: data(['a','b','c']),
         delta: data({ $splice: { from: 3, itemsToRemove: 0, toAdd: ['d']}}),
     })
@@ -72,7 +72,7 @@ jb.component('delta-join-push', {
 
 jb.component('delta-join-splice', {
     impl: deltaTest({
-        transformation: join(','),
+        transformation: join(),
         initialData: data(['a','b','c']),
         delta: data({ $splice: { from: 1, itemsToRemove: 1, toAdd: ['d']}}),
     })
@@ -80,7 +80,7 @@ jb.component('delta-join-splice', {
 
 jb.component('delta-join-splice2', {
     impl: deltaTest({
-        transformation: join(','),
+        transformation: join(),
         initialData: data(['a','b','c']),
         delta: data({ $splice: { from: 1, itemsToRemove: 2, toAdd: ['d']}}),
     })
@@ -88,7 +88,7 @@ jb.component('delta-join-splice2', {
 
 jb.component('delta-join-splice-begin', {
     impl: deltaTest({
-        transformation: join(','),
+        transformation: join(),
         initialData: data(['a','b','c']),
         delta: data({ $splice: { from: 0, itemsToRemove: 1, toAdd: ['d']}}),
     })
@@ -96,7 +96,7 @@ jb.component('delta-join-splice-begin', {
 
 jb.component('delta-join-splice-begin2', {
     impl: deltaTest({
-        transformation: join(','),
+        transformation: join(),
         initialData: data(['a','b','c']),
         delta: data({ $splice: { from: 0, itemsToRemove: 2, toAdd: ['d']}}),
     })

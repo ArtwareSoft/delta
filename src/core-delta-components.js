@@ -24,16 +24,14 @@ jb.component('mapValues', {
         {id: 'map', dynamic: true}
     ],
     impl: {$: 'with-delta-support',
-        noDeltaTransform: (ctx,{},{map}) => Array.isArray(ctx.data)
-            ? ctx.data.map(item=>map(ctx.setData(item)))
-            : jb.mapValues(ctx.data, item => map(ctx.setData(item))),
+        noDeltaTransform: (ctx,{},{map}) => jb.mapValues(ctx.data, item => map(ctx.setData(item))),
 
         update: (ctx,{},{map}) => {
             const calcultedEntries = jb.entries(ctx.data).filter(e=>e[0] != '$orig')
                 .map(e=>({ prop: e[0], 
                     orig: map(ctx.setData(ctx.data.$orig[e[0]])), 
                     newVal: map(ctx.setData(e[1])) }))
-                .filter(e=>e.newVal != e.orig)
+                .filter(e=> !jb.objectEquals(e.newVal,e.orig))
             
             const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop,orig}) =>[prop, orig]))
             return calcultedEntries.length ? jb.objFromEntries(calcultedEntries.map(({prop,newVal}) =>[prop, newVal])
@@ -47,7 +45,7 @@ jb.component('mapValues', {
 })
 
 jb.component('chain', {
-	type: 'data',
+	type: 'with-delta-support',
 	params: [
 		{ id: 'items', type: "data[]", ignore: true, mandatory: true, composite: true },
     ],

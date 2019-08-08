@@ -133,10 +133,12 @@ jb.propOfProfile = function(profile,prop) {
 }
 
 jb.mapValues = function(obj, mapFunc) {
+    if (Array.isArray(obj))
+        return obj.map((val,i) => mapFunc(val,i))
     return jb.objFromEntries(jb.entries(obj).map(e=> [e[0], mapFunc(e[1],e[0])]))
 }
 
-jb.compareObjects = function( x, y ) {
+jb.objectEquals = function( x, y ) {
     if ( x === y ) return true;
     if ( ! ( x instanceof Object ) || ! ( y instanceof Object ) ) return false;
     if ( x.constructor !== y.constructor ) return false;
@@ -145,7 +147,7 @@ jb.compareObjects = function( x, y ) {
       if ( ! y.hasOwnProperty( p ) ) return false;
       if ( x[ p ] === y[ p ] ) continue;
       if ( typeof( x[ p ] ) !== "object" ) return false;
-      if ( ! jb.compareObjects( x[ p ],  y[ p ] ) ) return false;
+      if ( ! jb.objectEquals( x[ p ],  y[ p ] ) ) return false;
     }
   
     for ( p in y ) {
