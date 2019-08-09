@@ -1,5 +1,5 @@
 (function() {
-const {applyDeltas, toDarray} = jb.delta
+const {applyDeltas, toDarray, objectDiff} = jb.delta
 
 jb.component('delta-test', {
 	type: 'test',
@@ -35,13 +35,14 @@ jb.component('delta-test', {
 
             const countersErr = countersErrors(expectedCounters);
             const deltaOutputErr = compareDeltaOutput(resultAfterDelta.dOutput);
-            const success = jb.objectEquals(resWithDelta,res) && !countersErr && !deltaOutputErr;
+            const diff = objectDiff(resWithDelta,res)
+            const success = jb.isEmpty(diff) && !countersErr && !deltaOutputErr;
             cleanUp()
             const deltaAsStr = jb.prettyPrint(delta, {showNulls: true}) + ' => ' + jb.prettyPrint(resultAfterDelta.dOutput, {showNulls: true}) 
             return { id: ctx.vars.testID, success, reason: (countersErr + deltaOutputErr) || deltaAsStr}
 
             function compareDeltaOutput(dOutput) {
-                if (!ctx.profile.expectedDeltaOutput || jb.objectEquals(dOutput,toDarray(expectedDeltaOutput))) 
+                if (!ctx.profile.expectedDeltaOutput || jb.isEmpty(objectDiff(dOutput,toDarray(expectedDeltaOutput)))) 
                     return ''
                 return 'delta output ' + jb.prettyPrint({actual: dOutput, expected: expectedDeltaOutput}, {showNulls: true})
             }

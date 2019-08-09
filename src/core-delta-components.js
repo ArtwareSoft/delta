@@ -1,3 +1,6 @@
+(function() {
+const {objectDiff, enrichWithOrig, mapValuesIgnoreOrig, applyDelta} = jb.delta
+
 jb.component('with-delta-support', {
     type: 'with-delta-support',
     params: [
@@ -27,15 +30,10 @@ jb.component('mapValues', {
         noDeltaTransform: (ctx,{},{map}) => jb.mapValues(ctx.data, item => map(ctx.setData(item))),
 
         update: (ctx,{},{map}) => {
-            const calcultedEntries = jb.entries(ctx.data).filter(e=>e[0] != '$orig')
-                .map(e=>({ prop: e[0], 
-                    orig: map(ctx.setData(ctx.data.$orig[e[0]])), 
-                    newVal: map(ctx.setData(e[1])) }))
-                .filter(e=> !jb.objectEquals(e.newVal,e.orig))
-            
-            const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop,orig}) =>[prop, orig]))
-            return calcultedEntries.length ? jb.objFromEntries(calcultedEntries.map(({prop,newVal}) =>[prop, newVal])
-                .concat([['$orig', newOrigEntry]])) : []
+            const newObj = applyDelta(ctx.data.$orig, ctx.data)
+            const origMapped = mapValuesIgnoreOrig(ctx.data.$orig, item => map(ctx.setData(item)))
+            return enrichWithOrig(objectDiff(
+                mapValuesIgnoreOrig(newObj, item => map(ctx.setData(item))), origMapped), origMapped)
         },
         splice: (ctx,{},{map}) => {
             const delta = ctx.data
@@ -102,3 +100,5 @@ jb.component('filter', {
         }
     }
 })
+
+})()

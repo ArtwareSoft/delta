@@ -1,6 +1,6 @@
 (function () {
 
-const {deltaTest, mapValues, chain, data, join, accumulateSum} = jb.profiles
+const {deltaTest, mapValues, chain, data, join, accumulateSum} = jb.macros
 
 jb.component('delta-map-values', {
     impl: deltaTest({

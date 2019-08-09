@@ -110,11 +110,9 @@ jb.component('count', {
 })
 
 function objFromProperties(props,ctx) {
-    return jb.objFromEntries(props.map(p=>[p.title, jb.tojstype(p.val(ctx),p.type)]))
+    return props.reduce((acc,p) => ({...acc, [p.title]: jb.tojstype(p.val(ctx),p.type) }), {})
 }
-function removeEntries(obj, keys) {
-    keys.foreach(k=> delete obj[key])
-}
+
 
 jb.component('extend', {
     type: 'with-delta-support',
@@ -127,24 +125,14 @@ jb.component('extend', {
                 Object.assign(item, objFromProperties(props,ctx.setData(item)))),
 
         update: (ctx,{},{props}) => {
-            const calcultedEntries = jb.entries(ctx.data).filter(e=>e[0] != '$orig')
-                .map(e=> {
-                    const orig = objFromProperties(props,ctx.setData(ctx.data.$orig[e[0]]))
-                    const newVal = objFromProperties(props,ctx.setData(e[1]))
-                    Object.keys(orig).foreach(key=> {
-                        if (jb.objectEquals(newVal[key],orig[key])) {
-                            delete newVal[key]
-                            delete orig[key]
-                        }
-                    })
-                    return { prop: e[0], orig, newVal }
-                })
-                .filter(e=> Object.keys(e.newVal).length)
-            
-            const newOrigEntry = jb.objFromEntries(calcultedEntries.map(({prop,orig}) =>[prop, orig]))
-            return calcultedEntries.length ? jb.objFromEntries(calcultedEntries.map(({prop,newVal}) =>[prop, newVal])
-                .concat([['$orig', newOrigEntry]])) : []
+            const fullNewObj = applyDelta(ctx.data.$orig, ctx.data);
+            const origValue = Object.assign(ctx.data.$orig, objFromProperties(props,ctx.setData(ctx.data.$orig)))
+            return Object.assign(objectDiff(
+                Object.assign(fullNewObj, objFromProperties(props,ctx.setData(fullNewObj))),
+                origValue
+            ), {$orig: origValue})
         },
+        
         splice: (ctx,{},{map}) => {
             const delta = ctx.data
             return Object.assign({}, delta.$splice, { toAdd: delta.$splice.toAdd.map(v=> map(ctx.setData(v))) })

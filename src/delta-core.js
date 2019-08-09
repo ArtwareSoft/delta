@@ -33,6 +33,7 @@ delta_ops = {
 
 
 // apply the redux way
+const applyDeltas = (input, deltas) => toDarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input)
 function applyDelta(val,delta) {
     if (delta === undefined) return
     if (val === undefined && delta && typeof delta === 'object')
@@ -48,6 +49,11 @@ function applyDelta(val,delta) {
     }
     return delta; // primitive without op
 }
+function handleDeltaByType(delta,ctx) {
+    if (delta.$splice)
+        return ctx.params.splice(ctx.setData(delta))
+    return ctx.params.update(ctx.setData(delta))
+}
 
 function toDarray(delta) {
     if (delta === null || delta === undefined)
@@ -60,22 +66,26 @@ function asDarray(arr) {
     arr.$dArray = true
     return arr;
 }
-
-function toSingleDelta(deltas) {
-    return deltas && deltas.$dArray ? deltas[0] : deltas
+function addToDarray(dArr, toAdd) {
+    if (Array.isArray(toAdd))
+        return dArr.concat(toAdd.filter(x=>x && !jb.isEmpty(x)))
+    return toAdd && !jb.isEmpty(toAdd) ? dArr.concat(toAdd) : dArr
 }
 
+const toSingleDelta = deltas => deltas && deltas.$dArray ? deltas[0] : deltas
 const cleanUndefined = obj => jb.objFromEntries(jb.entries(obj).filter(e=> e[1] !== undefined))
-
-const applyDeltas = (input, deltas) => toDarray(deltas).reduce( (res, delta) => res = applyDelta(res, delta) , input)
+const mapValuesIgnoreOrig = (obj, mapFunc) =>
+    Object.keys(obj).filter(k=>k!='$orig').reduce((acc, key) => ({ ...acc, [key]: mapFunc(obj[key],key) }) , {})
 
 jb.delta = {
     toDarray,
     toSingleDelta,
     asDarray,
+    applyDelta,
     applyDeltas,
-    enrichWithOrig: (obj,orig) => // todo: recursive
-        Object.assign({},obj, {$orig: jb.objFromEntries(jb.entries(obj).filter(e=> e[0].indexOf('$') !== 0).map(e=>[e[0],orig[e[0]]])) }),
+    mapValuesIgnoreOrig,
+    enrichWithOrig: (obj,orig) =>
+        jb.isEmpty(obj) ? obj : Object.assign({},obj, {$orig: mapValuesIgnoreOrig(obj,(v,k)=>orig[k])}),
 
     deltaWithCache(dInputs,{cache, init, noDeltaTransform} = {}, ctx) {
         this.delta2deltaCache = this.delta2deltaCache || ctx.params.inputToCache(ctx);
@@ -91,20 +101,14 @@ jb.delta = {
         let main = cache.main, inner = cache.inner;
         const dCache = []
         const dOutput = asDarray(toDarray(dInputs).reduce((dOutput,delta) => {
-                const res = handleDeltaByType(ctx.setVars({cache: main}), delta)
+                const res = handleDeltaByType(delta,ctx.setVars({cache: main}))
                 const cacheRes = this.delta2deltaCache.delta(dInputs, {cache: inner})
                 main = applyDeltas(main, cacheRes.dOutput)
                 inner = applyDeltas(inner, cacheRes.dCache)
                 dCache.push({main: cacheRes.dOutput, inner: cacheRes.dCache})
-                return dOutput.concat(jb.toarray(res))
+                return addToDarray(dOutput,res)
             }   , []))
         return { dOutput, dCache }
-
-        function handleDeltaByType(ctxWithCache, delta) {
-            if (delta.$splice)
-                return ctx.params.splice(ctxWithCache.setData(delta))
-            return ctx.params.update(ctxWithCache.setData(delta))
-        }
     },
     deltaWithoutCache(dInputs,{init, noDeltaTransform} = {}, ctx) {
         if (init) {
@@ -112,48 +116,33 @@ jb.delta = {
             return { dOutput: noDeltaTransform(ctxWithFullData) }
         }
         
-        const dOutput = asDarray(toDarray(dInputs).reduce((dOutput,delta) => {
-            const res = handleDeltaByType(delta)
-            return dOutput.concat(res)
-        }   , []))
+        const dOutput = asDarray(toDarray(dInputs).reduce((dOutput,delta) =>
+            addToDarray(dOutput, handleDeltaByType(delta,ctx)), []))
         return { dOutput }
-
-        function handleDeltaByType(delta) {
-            if (delta.$splice)
-                return ctx.params.splice(ctx.setData(delta))
-            return ctx.params.update(ctx.setData(delta))
-        }
     },
-}
-
-jb.propOfProfile = function(profile,prop) {
-    if (profile[prop]) return profile[prop];
-    const sugarProp = jb.entries(profile).filter(p=>p[0].indexOf('$') == 0 && p[0].length > 1)
-    return sugarProp[0] && sugarProp[0][1]
+    objectDiff(newObj, orig) {
+        if (orig === newObj) return {}
+        if (!jb.isObject(orig) || !jb.isObject(newObj)) return newObj
+        const deletedValues = Object.keys(orig).reduce((acc, key) =>
+            newObj.hasOwnProperty(key) ? acc : { ...acc, [key]: undefined }
+        , {})
+      
+        return Object.keys(newObj).reduce((acc, key) => {
+          if (!orig.hasOwnProperty(key)) return { ...acc, [key]: newObj[key] } // return added r key
+          const difference = jb.delta.objectDiff(newObj[key], orig[key])
+          if (jb.isObject(difference) && jb.isEmpty(difference)) return acc // return no diff
+          return { ...acc, [key]: difference } // return updated key
+        }, deletedValues)
+    },
 }
 
 jb.mapValues = function(obj, mapFunc) {
     if (Array.isArray(obj))
         return obj.map((val,i) => mapFunc(val,i))
-    return jb.objFromEntries(jb.entries(obj).map(e=> [e[0], mapFunc(e[1],e[0])]))
+    return Object.keys(obj).reduce((acc, key) => ({ ...acc, [key]: mapFunc(obj[key],key) }) , {})
 }
 
-jb.objectEquals = function( x, y ) {
-    if ( x === y ) return true;
-    if ( ! ( x instanceof Object ) || ! ( y instanceof Object ) ) return false;
-    if ( x.constructor !== y.constructor ) return false;
-    for ( var p in x ) {
-      if ( ! x.hasOwnProperty( p ) ) continue;
-      if ( ! y.hasOwnProperty( p ) ) return false;
-      if ( x[ p ] === y[ p ] ) continue;
-      if ( typeof( x[ p ] ) !== "object" ) return false;
-      if ( ! jb.objectEquals( x[ p ],  y[ p ] ) ) return false;
-    }
+jb.isEmpty = o => Object.keys(o).length === 0;
+jb.isObject = o => o != null && typeof o === 'object';
   
-    for ( p in y ) {
-      if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
-    }
-    return true;
-}
-
 })()

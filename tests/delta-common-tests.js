@@ -1,6 +1,6 @@
 (function () {
 
-const {deltaTest, mapValues, chain, data, join, accumulateSum, select, filter, count} = jb.profiles
+const {deltaTest, mapValues, chain, data, join, accumulateSum, select, filter, count} = jb.macros
 
 jb.const('tasks', {
     'gym': { done: false},
